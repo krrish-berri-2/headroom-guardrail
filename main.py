@@ -89,11 +89,13 @@ def health() -> dict[str, str]:
 class DebugResponse(BaseModel):
     tokens_saved: Any
     compression_ratio: Any
+    tokens_before: Any
+    tokens_after: Any
     input_message_count: int
     output_message_count: int
+    transforms_applied: Any
     input_texts: list[str]
     output_texts: list[str]
-    result_attrs: list[str]
 
 
 @app.post("/debug/compress", response_model=DebugResponse)
@@ -105,11 +107,13 @@ async def debug_compress(request: GuardrailRequest) -> DebugResponse:
     return DebugResponse(
         tokens_saved=getattr(result, "tokens_saved", None),
         compression_ratio=getattr(result, "compression_ratio", None),
+        tokens_before=getattr(result, "tokens_before", None),
+        tokens_after=getattr(result, "tokens_after", None),
         input_message_count=len(messages),
         output_message_count=len(compressed),
+        transforms_applied=getattr(result, "transforms_applied", []),
         input_texts=_extract_texts_from_messages(messages),
         output_texts=_extract_texts_from_messages(compressed),
-        result_attrs=[a for a in dir(result) if not a.startswith("_")],
     )
 
 
