@@ -51,11 +51,11 @@ class GuardrailResponse(BaseModel):
     action: str
     texts: Optional[list[str]] = None
     images: Optional[list[str]] = None
+    structured_messages: Optional[list[dict[str, Any]]] = None
     blocked_reason: Optional[str] = None
 
 
 def _extract_texts_from_messages(messages: list[dict[str, Any]]) -> list[str]:
-    """Extract flat text strings from compressed messages, preserving order."""
     texts: list[str] = []
     for msg in messages:
         content: Any = msg.get("content")
@@ -145,17 +145,19 @@ async def guardrail(
 
     compressed_messages: list[dict[str, Any]] = result.messages  # type: ignore[attr-defined]
 
+    tokens_saved = getattr(result, "tokens_saved", 0)
     logger.info(
         "headroom compressed call_id=%s model=%s tokens_saved=%s compression_ratio=%s",
         request.litellm_call_id,
         model,
-        getattr(result, "tokens_saved", "?"),
+        tokens_saved,
         getattr(result, "compression_ratio", "?"),
     )
 
-    compressed_texts = _extract_texts_from_messages(compressed_messages)
-
-    if not compressed_texts:
+    if not tokens_saved:
         return GuardrailResponse(action="NONE")
 
-    return GuardrailResponse(action="GUARDRAIL_INTERVENED", texts=compressed_texts)
+    return GuardrailResponse(
+        action="GUARDRAIL_INTERVENED",
+        structured_messages=compressed_messages,
+    )
