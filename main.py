@@ -102,7 +102,7 @@ class DebugResponse(BaseModel):
 async def debug_compress(request: GuardrailRequest) -> DebugResponse:
     messages = request.structured_messages or []
     model = _resolve_model(request)
-    result = compress(messages, model=model)
+    result = compress(messages, model=model, compress_user_messages=True, protect_recent=0)
     compressed: list[dict[str, Any]] = result.messages  # type: ignore[attr-defined]
     return DebugResponse(
         tokens_saved=getattr(result, "tokens_saved", None),
@@ -135,7 +135,7 @@ async def guardrail(
     model = _resolve_model(request)
 
     try:
-        result = compress(messages, model=model)
+        result = compress(messages, model=model, compress_user_messages=True, protect_recent=0)
     except Exception:
         logger.exception(
             "headroom compress failed (call_id=%s); passing through unchanged",
