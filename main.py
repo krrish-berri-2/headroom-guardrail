@@ -86,6 +86,33 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+class DebugResponse(BaseModel):
+    tokens_saved: Any
+    compression_ratio: Any
+    input_message_count: int
+    output_message_count: int
+    input_texts: list[str]
+    output_texts: list[str]
+    result_attrs: list[str]
+
+
+@app.post("/debug/compress", response_model=DebugResponse)
+async def debug_compress(request: GuardrailRequest) -> DebugResponse:
+    messages = request.structured_messages or []
+    model = _resolve_model(request)
+    result = compress(messages, model=model)
+    compressed: list[dict[str, Any]] = result.messages  # type: ignore[attr-defined]
+    return DebugResponse(
+        tokens_saved=getattr(result, "tokens_saved", None),
+        compression_ratio=getattr(result, "compression_ratio", None),
+        input_message_count=len(messages),
+        output_message_count=len(compressed),
+        input_texts=_extract_texts_from_messages(messages),
+        output_texts=_extract_texts_from_messages(compressed),
+        result_attrs=[a for a in dir(result) if not a.startswith("_")],
+    )
+
+
 @app.post("/beta/litellm_basic_guardrail_api", response_model=GuardrailResponse)
 async def guardrail(
     request: GuardrailRequest,
